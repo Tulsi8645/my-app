@@ -12,7 +12,13 @@ export async function POST(request) {
         const client = await clientPromise;
         const db = client.db('attendance');
 
-        const today = new Date();
+        const nepalDateStr = new Date().toLocaleDateString("en-US", {
+            timeZone: "Asia/Kathmandu",
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+        const today = new Date(nepalDateStr);
         today.setHours(0, 0, 0, 0);
 
         // Find or create today's attendance record
