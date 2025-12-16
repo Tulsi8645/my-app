@@ -59,7 +59,7 @@ function AttendanceApp() {
       if (response.ok) {
         setEmployee(data.employee);
         localStorage.setItem('employee', JSON.stringify(data.employee));
-        setResult(null); // Clear any previous errors
+        setResult(null);
         // Silent login success
       } else {
         setResult({ success: false, message: data.error || 'Login failed' });
