@@ -115,8 +115,8 @@ function AttendanceApp() {
           const sessions = todayRecord.sessions || [];
           const lastSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
 
-          // If last session exists and checkOut is "Active", user is checked in.
-          const isActive = lastSession && (lastSession.checkOut === 'Active' || !lastSession.checkOut);
+          // If last session exists and checkOut is null (or "Active" legacy), user is checked in.
+          const isActive = lastSession && !lastSession.checkOut;
           setIsCheckedIn(!!isActive);
         } else {
           setIsCheckedIn(false);

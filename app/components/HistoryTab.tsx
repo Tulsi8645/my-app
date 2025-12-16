@@ -7,6 +7,15 @@ interface HistoryTabProps {
     loading: boolean;
 }
 
+const formatTime = (isoString: string | undefined | null) => {
+    if (!isoString) return '--:--';
+    return new Date(isoString).toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+};
+
 const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
     return (
         <div className="p-6 space-y-6">
@@ -37,21 +46,21 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
                 <div className="space-y-4">
                     {history.map((record, index) => (
                         <div key={index} className={`relative bg-white rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md overflow-hidden group ${record.status === 'present' ? 'border-green-100 hover:border-green-200' :
-                                record.status === 'late' ? 'border-yellow-100 hover:border-yellow-200' :
-                                    'border-red-100 hover:border-red-200'
+                            record.status === 'late' ? 'border-yellow-100 hover:border-yellow-200' :
+                                'border-red-100 hover:border-red-200'
                             }`}>
                             {/* Decorative Background Gradient */}
                             <div className={`absolute top-0 right-0 w-32 h-32 opacity-10 rounded-full -mr-16 -mt-16 blur-xl ${record.status === 'present' ? 'bg-green-500' :
-                                    record.status === 'late' ? 'bg-yellow-500' :
-                                        'bg-red-500'
+                                record.status === 'late' ? 'bg-yellow-500' :
+                                    'bg-red-500'
                                 }`}></div>
 
                             <div className="relative z-10">
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center space-x-3">
                                         <div className={`p-3 rounded-xl border ${record.status === 'present' ? 'bg-green-50 border-green-100 text-green-700' :
-                                                record.status === 'late' ? 'bg-yellow-50 border-yellow-100 text-yellow-700' :
-                                                    'bg-red-50 border-red-100 text-red-700'
+                                            record.status === 'late' ? 'bg-yellow-50 border-yellow-100 text-yellow-700' :
+                                                'bg-red-50 border-red-100 text-red-700'
                                             }`}>
                                             <div className="text-xs font-bold uppercase tracking-wider text-center leading-none">
                                                 {new Date(record.date).toLocaleDateString(undefined, { month: 'short' })}
@@ -66,8 +75,8 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
                                                 {new Date(record.date).toLocaleDateString(undefined, { weekday: 'long' })}
                                             </div>
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide mt-1 ${record.status === 'present' ? 'bg-green-100 text-green-700' :
-                                                    record.status === 'late' ? 'bg-yellow-100 text-yellow-700' :
-                                                        'bg-red-100 text-red-700'
+                                                record.status === 'late' ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-red-100 text-red-700'
                                                 }`}>
                                                 {record.status}
                                             </span>
@@ -76,8 +85,8 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
 
                                     {/* Status Icon/Visual */}
                                     <div className={`w-2 h-12 rounded-full ${record.status === 'present' ? 'bg-green-500' :
-                                            record.status === 'late' ? 'bg-yellow-500' :
-                                                'bg-red-500'
+                                        record.status === 'late' ? 'bg-yellow-500' :
+                                            'bg-red-500'
                                         }`}></div>
                                 </div>
 
@@ -85,13 +94,13 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
                                     <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-center">
                                         <span className="text-xs font-medium text-gray-500 uppercase">Clock In</span>
                                         <div className="font-bold text-gray-900 text-xl mt-0.5">
-                                            {record.clockIn || '--:--'}
+                                            {formatTime(record.clockIn)}
                                         </div>
                                     </div>
                                     <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-center text-right">
                                         <span className="text-xs font-medium text-gray-500 uppercase">Clock Out</span>
                                         <div className="font-bold text-gray-900 text-xl mt-0.5">
-                                            {record.clockOut || '--:--'}
+                                            {formatTime(record.clockOut)}
                                         </div>
                                     </div>
                                 </div>
@@ -101,10 +110,10 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
                                         <div className="space-y-2">
                                             {record.sessions.map((session, sIdx) => (
                                                 <div key={sIdx} className="flex items-center justify-between text-sm bg-white p-2 rounded-lg border border-gray-50 shadow-sm">
-                                                    <span className="font-medium text-gray-600 bg-gray-50 px-2 py-0.5 rounded text-xs">{session.checkIn}</span>
+                                                    <span className="font-medium text-gray-600 bg-gray-50 px-2 py-0.5 rounded text-xs">{formatTime(session.checkIn)}</span>
                                                     <span className="text-gray-300 mx-1">➜</span>
                                                     <span className="font-medium text-gray-600 bg-gray-50 px-2 py-0.5 rounded text-xs">
-                                                        {session.checkOut || <span className="text-green-600 font-bold animate-pulse">Active</span>}
+                                                        {session.checkOut ? formatTime(session.checkOut) : <span className="text-green-600 font-bold animate-pulse">Active</span>}
                                                     </span>
                                                 </div>
                                             ))}

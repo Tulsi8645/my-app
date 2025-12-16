@@ -19,16 +19,12 @@ export async function GET(request) {
 
         const formattedRecords = records.map(record => ({
             date: record.date,
-            clockIn: record.clockIn
-                ? new Date(record.clockIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                : (record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'),
-            clockOut: record.clockOut
-                ? new Date(record.clockOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                : (record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'),
+            clockIn: record.clockIn || record.checkInTime || null,
+            clockOut: record.clockOut || record.checkOutTime || null,
             status: record.status,
             sessions: record.sessions ? record.sessions.map(s => ({
-                checkIn: new Date(s.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-                checkOut: s.checkOut ? new Date(s.checkOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Active'
+                checkIn: s.checkIn,
+                checkOut: s.checkOut || null
             })) : []
         }));
 
