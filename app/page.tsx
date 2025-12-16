@@ -224,6 +224,7 @@ function AttendanceApp() {
               employeeId: employee._id,
               latitude,
               longitude,
+              address, // Send readable address
               timestamp: Date.now(),
               type
             })

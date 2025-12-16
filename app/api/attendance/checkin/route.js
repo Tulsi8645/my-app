@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb';
 
 export async function POST(request) {
     try {
-        const { employeeId, latitude, longitude, timestamp, type } = await request.json();
+        const { employeeId, latitude, longitude, address, timestamp, type } = await request.json();
 
         const ipAddress = getClientIP(request);
 
@@ -43,14 +43,26 @@ export async function POST(request) {
             // Prepare new session
             const newSession = {
                 checkIn: new Date(timestamp),
-                checkInLocation: { latitude, longitude },
+                checkInLocation: { latitude, longitude, address },
                 checkInIP: ipAddress,
                 checkOut: null // Explicitly null for active session
             };
 
             // Calculate status
-            const checkInDate = new Date(timestamp);
-            const isLate = checkInDate.getHours() > 9 || (checkInDate.getHours() === 9 && checkInDate.getMinutes() > 30);
+            // Use Nepal Time (UTC+5:45) for Late calculation
+            // Late if after 9:30 AM Nepal Time
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Kathmandu',
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false
+            });
+
+            const parts = formatter.formatToParts(new Date(timestamp));
+            const hour = parseInt(parts.find(p => p.type === 'hour').value);
+            const minute = parseInt(parts.find(p => p.type === 'minute').value);
+
+            const isLate = hour > 9 || (hour === 9 && minute > 30);
             const status = isLate ? 'late' : 'present';
 
             if (existingRecord) {
@@ -111,7 +123,7 @@ export async function POST(request) {
                     {
                         $set: {
                             clockIn: new Date(timestamp), // First clock in
-                            checkInLocation: { latitude, longitude }, // Keep for legacy reference/first loc
+                            checkInLocation: { latitude, longitude, address },
                             checkInIP: ipAddress,
                             status: status,
                             sessions: [newSession]
@@ -148,7 +160,7 @@ export async function POST(request) {
             const updateQuery = {
                 $set: {
                     clockOut: new Date(timestamp), // Update latest clock out
-                    checkOutLocation: { latitude, longitude }, // Legacy/Latest reference
+                    checkOutLocation: { latitude, longitude, address }, // Legacy/Latest reference
                     checkOutIP: ipAddress
                 }
             };
@@ -156,7 +168,7 @@ export async function POST(request) {
             // If we are working with the legacy implicit session or array session
             if (existingRecord.sessions) {
                 updateQuery.$set[`sessions.${sessionIndex}.checkOut`] = new Date(timestamp);
-                updateQuery.$set[`sessions.${sessionIndex}.checkOutLocation`] = { latitude, longitude };
+                updateQuery.$set[`sessions.${sessionIndex}.checkOutLocation`] = { latitude, longitude, address };
                 updateQuery.$set[`sessions.${sessionIndex}.checkOutIP`] = ipAddress;
             } else {
                 // Migration case
@@ -165,7 +177,7 @@ export async function POST(request) {
                     checkInLocation: existingRecord.checkInLocation || {},
                     checkInIP: existingRecord.checkInIP || '',
                     checkOut: new Date(timestamp),
-                    checkOutLocation: { latitude, longitude },
+                    checkOutLocation: { latitude, longitude, address },
                     checkOutIP: ipAddress
                 }];
                 // Also ensure clockIn is set if missing
