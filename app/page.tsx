@@ -1,65 +1,364 @@
-import Image from "next/image";
+"use client";
+import React, { useState, useEffect } from 'react';
+import { MapPin, Users, Calendar } from 'lucide-react';
+import { Employee, Location, AttendanceRecord, Stats, Result, LoginForm } from './types';
+import LoginScreen from './components/LoginScreen';
+import CheckInTab from './components/CheckInTab';
+import HistoryTab from './components/HistoryTab';
+import ProfileTab from './components/ProfileTab';
 
-export default function Home() {
+function AttendanceApp() {
+  const [activeTab, setActiveTab] = useState<'check-in' | 'history' | 'profile'>('check-in');
+  const [location, setLocation] = useState<Location | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<Result | null>(null);
+  const [history, setHistory] = useState<AttendanceRecord[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [loginForm, setLoginForm] = useState<LoginForm>({ email: '', password: '' });
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const savedEmployee = localStorage.getItem('employee');
+    if (savedEmployee) {
+      setEmployee(JSON.parse(savedEmployee));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'history' && employee) {
+      loadHistory();
+    }
+  }, [activeTab, employee]);
+
+  useEffect(() => {
+    if (activeTab === 'profile' && employee) {
+      loadStats();
+    }
+  }, [activeTab, employee]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginForm)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmployee(data.employee);
+        localStorage.setItem('employee', JSON.stringify(data.employee));
+        setResult(null); // Clear any previous errors
+        // Silent login success
+      } else {
+        setResult({ success: false, message: data.error || 'Login failed' });
+      }
+    } catch (error) {
+      setResult({ success: false, message: 'Network error. Please try again.' });
+    }
+
+    setLoading(false);
+  };
+
+  const handleLogout = () => {
+    setEmployee(null);
+    localStorage.removeItem('employee');
+    setActiveTab('check-in');
+    setResult(null);
+  };
+
+  const loadHistory = async () => {
+    if (!employee) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/attendance/history?employeeId=${employee._id}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setHistory(data.records);
+      }
+    } catch (error) {
+      console.error('Error loading history:', error);
+    }
+    setLoading(false);
+  };
+
+  const fetchTodayStatus = async () => {
+    if (!employee) return;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/attendance/history?employeeId=${employee._id}`);
+      const data = await response.json();
+
+      if (response.ok && data.records.length > 0) {
+        // Compare dates using local browser time to handle UTC conversion from backend
+        const todayDateString = new Date().toDateString();
+        const todayRecord = data.records.find((r: AttendanceRecord) =>
+          new Date(r.date).toDateString() === todayDateString
+        );
+
+        if (todayRecord) {
+          // Check if the last session is active
+          // Note: The history API returns formatted times.
+          // We need to look at the sessions array.
+          const sessions = todayRecord.sessions || [];
+          const lastSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
+
+          // If last session exists and checkOut is "Active", user is checked in.
+          const isActive = lastSession && (lastSession.checkOut === 'Active' || !lastSession.checkOut);
+          setIsCheckedIn(!!isActive);
+        } else {
+          setIsCheckedIn(false);
+        }
+      } else {
+        setIsCheckedIn(false);
+      }
+    } catch (error) {
+      console.error("Error fetching status:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (employee) {
+      fetchTodayStatus();
+    }
+  }, [employee]);
+
+  const loadStats = async () => {
+    if (!employee) return;
+    try {
+      const response = await fetch(`/api/attendance/stats?employeeId=${employee._id}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
+
+  // Fetch location on mount for UI display
+  const fetchLocation = () => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        let address = '';
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          if (res.ok) {
+            const data = await res.json();
+            address = data.display_name;
+          }
+        } catch (error) {
+          console.error('Reverse geocoding failed:', error);
+        }
+        setLocation({ lat: latitude, lng: longitude, address });
+      },
+      (error) => {
+        console.log("Error fetching initial location", error);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  useEffect(() => {
+    if (activeTab === 'check-in' && !location) {
+      fetchLocation();
+    }
+  }, [activeTab]);
+
+  const handleVerifyLocation = () => {
+    fetchLocation();
+  };
+
+  const handleCheckIn = (type: 'checkin' | 'checkout') => {
+    if (!navigator.geolocation) {
+      setResult({
+        success: false,
+        message: 'Geolocation is not supported by your browser'
+      });
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        let address = '';
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          if (res.ok) {
+            const data = await res.json();
+            address = data.display_name;
+          }
+        } catch (error) {
+          console.error('Reverse geocoding failed:', error);
+        }
+
+        setLocation({ lat: latitude, lng: longitude, address });
+
+        if (!employee) return;
+
+        try {
+          const response = await fetch('/api/attendance/checkin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employeeId: employee._id,
+              latitude,
+              longitude,
+              timestamp: Date.now(),
+              type
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            setResult({
+              success: true,
+              message: `${type === 'checkin' ? 'Check-in' : 'Check-out'} successful!`,
+            });
+            setIsCheckedIn(type === 'checkin');
+            fetchTodayStatus(); // Refresh to be sure
+          } else {
+            setResult({
+              success: false,
+              message: data.error || 'Attendance marking failed',
+              details: data
+            });
+          }
+        } catch (error) {
+          setResult({
+            success: false,
+            message: 'Error processing attendance. Please try again.'
+          });
+        }
+
+        setLoading(false);
+      },
+      (error) => {
+        let errorMessage = 'Unable to retrieve your location.';
+        switch (error.code) {
+          case 1: // PERMISSION_DENIED
+            errorMessage = 'Location permission denied. Please enable location services in your browser settings.';
+            break;
+          case 2: // POSITION_UNAVAILABLE
+            errorMessage = 'Location information is unavailable. Ensure GPS is enabled.';
+            break;
+          case 3: // TIMEOUT
+            errorMessage = 'Location request timed out. Please try again.';
+            break;
+        }
+
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          errorMessage += ' (Note: Geolocation requires HTTPS on non-localhost connections)';
+        }
+
+        setResult({
+          success: false,
+          message: errorMessage
+        });
+        setLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 30000,
+        maximumAge: 60000
+      }
+    );
+  };
+
+  if (!employee) {
+    return (
+      <LoginScreen
+        loginForm={loginForm}
+        setLoginForm={setLoginForm}
+        handleLogin={handleLogin}
+        loading={loading}
+        result={result}
+      />
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <div className="min-h-screen bg-gray-50 pb-32">
+      <div className="max-w-md mx-auto bg-white shadow-xl">
+        <div className="bg-white">
+          {activeTab === 'check-in' && (
+            <CheckInTab
+              employee={employee}
+              currentTime={currentTime}
+              location={location}
+              loading={loading}
+              result={result}
+              handleCheckIn={handleCheckIn}
+              isCheckedIn={isCheckedIn}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          )}
+          {activeTab === 'history' && (
+            <HistoryTab
+              history={history}
+              loading={loading}
+            />
+          )}
+          {activeTab === 'profile' && (
+            <ProfileTab
+              employee={employee}
+              stats={stats}
+              handleLogout={handleLogout}
+            />
+          )}
         </div>
-      </main>
+
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+          <div className="max-w-md mx-auto flex justify-around items-center h-12">
+            <button
+              onClick={() => setActiveTab('check-in')}
+              className={`flex flex-col items-center justify-center space-y-1 px-6 py-2 transition-colors ${activeTab === 'check-in' ? 'text-blue-600' : 'text-gray-400'
+                }`}
+            >
+              <MapPin className="w-6 h-6" />
+              <span className="text-xs font-medium">Check In</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex flex-col items-center justify-center space-y-1 px-6 py-2 transition-colors ${activeTab === 'history' ? 'text-blue-600' : 'text-gray-400'
+                }`}
+            >
+              <Calendar className="w-6 h-6" />
+              <span className="text-xs font-medium">History</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`flex flex-col items-center justify-center space-y-1 px-6 py-2 transition-colors ${activeTab === 'profile' ? 'text-blue-600' : 'text-gray-400'
+                }`}
+            >
+              <Users className="w-6 h-6" />
+              <span className="text-xs font-medium">Profile</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
+export default AttendanceApp;

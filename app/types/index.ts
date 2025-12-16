@@ -1,0 +1,52 @@
+export interface Employee {
+    _id: string;
+    name: string;
+    email: string;
+    department: string;
+    employeeId: string;
+}
+
+export interface Location {
+    lat: number;
+    lng: number;
+    address?: string;
+}
+
+export interface Session {
+    checkIn: string;
+    checkInLocation: object;
+    checkInIP: string;
+    checkOut?: string;
+    checkOutLocation?: object;
+    checkOutIP?: string;
+}
+
+export interface AttendanceRecord {
+    date: string;
+    status: 'present' | 'late' | 'absent';
+    clockIn?: string;
+    clockOut?: string;
+    sessions?: Session[];
+    distance?: number;
+}
+
+export interface Stats {
+    present: number;
+    late: number;
+}
+
+export interface ResultDetails {
+    isWithinGeofence: boolean;
+    isValidIP: boolean;
+}
+
+export interface Result {
+    success: boolean;
+    message: string;
+    details?: ResultDetails;
+}
+
+export interface LoginForm {
+    email: string;
+    password: string;
+}
