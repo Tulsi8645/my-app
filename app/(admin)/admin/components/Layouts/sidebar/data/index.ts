@@ -27,6 +27,13 @@ export const NAV_DATA: NavSection[] = [
         icon: Icons.HomeIcon,
         items: [],
       },
+
+      {
+        title: "Attendance Logs",
+        url: "/admin/attendance-logs",
+        icon: Icons.Table,
+        items: [],
+      },
     ],
   },
 ];

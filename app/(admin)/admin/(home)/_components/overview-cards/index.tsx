@@ -1,4 +1,5 @@
 import { OverviewCard } from "./card";
+import { TimeWidget } from "../time-widget";
 import * as icons from "./icons";
 
 interface OverviewCardsGroupProps {
@@ -34,23 +35,7 @@ export function OverviewCardsGroup({ data }: OverviewCardsGroupProps) {
         Icon={icons.Profit}
       />
 
-      <OverviewCard
-        label="Total Employees"
-        data={{
-          ...users,
-          value: users.value.toString(),
-        }}
-        Icon={icons.Users}
-      />
-
-      <OverviewCard
-        label="Total Hours"
-        data={{
-          ...totalHours,
-          value: totalHours.value.toString(),
-        }}
-        Icon={icons.Product} // Reusing Product icon or change if needed
-      />
+      <TimeWidget name="Tecobit" />
     </div>
   );
 }

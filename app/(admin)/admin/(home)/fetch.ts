@@ -3,28 +3,59 @@ import Attendance from "@/models/Attendance";
 import User from "@/models/User";
 import mongoose from "mongoose";
 
-export async function getOverviewData() {
+export async function getOverviewData(dateParam?: string) {
   await connectDB();
 
   // 1. Total Users (Employees)
   const totalUsers = await User.countDocuments({ role: { $ne: 'admin' } }); // Assuming 'user' or just not admin
 
-  // 2. Attendance Today
-  const nepalDateStr = new Date().toLocaleDateString("en-US", {
-    timeZone: "Asia/Kathmandu",
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const today = new Date(nepalDateStr);
-  today.setHours(0, 0, 0, 0);
+  // 2. Attendance Target Date & Timezone Logic
+  const NEPAL_OFFSET_MS = 20700000; // 5 hours 45 minutes in milliseconds
+
+  let targetDateString = dateParam;
+
+  if (!targetDateString) {
+    // Get current date in Nepal
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const nepalTime = new Date(utc + NEPAL_OFFSET_MS);
+    targetDateString = nepalTime.toISOString().split('T')[0];
+  }
+
+  // Calculate Query Range in UTC
+  // targetDateString is 'YYYY-MM-DD' representing a Nepal Date.
+  // We want 00:00 Nepal Time to 24:00 Nepal Time.
+  // 00:00 Nepal Time = (UTC Midnight of Date) - 5h 45m
+  // Wait, Date('YYYY-MM-DD') is usually UTC midnight.
+
+  const dateParts = targetDateString!.split('-');
+  const year = parseInt(dateParts[0]);
+  const month = parseInt(dateParts[1]) - 1; // JS months are 0-indexed
+  const day = parseInt(dateParts[2]);
+
+  // Create a UTC Date object for midnight of that day
+  const utcMidnight = Date.UTC(year, month, day);
+
+  // Nepal Midnight in UTC milliseconds
+  // If Nepal is +5:45 ahead of UTC, then 00:00 Nepal is 18:15 previous day UTC.
+  // So we SUBTRACT the offset from UTC midnight? 
+  // Example: Nepal 5:45 AM = UTC 00:00.
+  // Nepal 00:00 = UTC (00:00 - 5h45m) = Previous Day 18:15.
+  // Yes.
+
+  const startMs = utcMidnight - NEPAL_OFFSET_MS;
+  const endMs = startMs + (24 * 60 * 60 * 1000);
+
+  const dStart = new Date(startMs);
+  const dEnd = new Date(endMs);
 
   // We need to lookup user names for the attendance records
   // Using aggregate to join with users
   const todayRecords = await Attendance.aggregate([
     {
       $match: {
-        date: today
+        // Match any record where the 'date' falls within this Nepal Day range
+        date: { $gte: dStart, $lt: dEnd }
       }
     },
     {
@@ -41,6 +72,7 @@ export async function getOverviewData() {
         status: 1,
         employeeId: 1,
         sessions: 1,
+        checkInTime: 1,
         employeeName: { $ifNull: ["$user.name", "Unknown"] }
       }
     }
@@ -125,7 +157,10 @@ export async function getOverviewData() {
   // Create a map of attendance by employee ID string
   const attendanceMap = new Map();
   todayRecords.forEach((record: any) => {
-    attendanceMap.set(record.employeeId.toString(), record);
+    // Robust check for employeeId
+    if (record.employeeId) {
+      attendanceMap.set(record.employeeId.toString(), record);
+    }
   });
 
   const timelineSeriesData: any[] = [];
@@ -135,22 +170,21 @@ export async function getOverviewData() {
     if (record && record.sessions && record.sessions.length > 0) {
       record.sessions.forEach((session: any) => {
         let start = new Date(session.checkIn).getTime();
-        let end = session.checkOut ? new Date(session.checkOut).getTime() : Date.now();
+        let end = session.checkOut ? new Date(session.checkOut).getTime() : new Date().getTime(); // use 'now' for end if active
+        // Logic to clamp 'end' if it's way in future? No, logic is fine.
 
-        // Handle open session (active)
-        // ApexCharts RangeBar needs [min, max]
-
-        timelineSeriesData.push({
-          x: user.name,
-          y: [start, end],
-          fillColor: session.checkOut ? '#3C50E0' : '#10B981' // Blue for completed, Green for active
-        });
+        // Ensure start/end are valid
+        if (!isNaN(start) && !isNaN(end)) {
+          timelineSeriesData.push({
+            x: user.name,
+            y: [start, end],
+            fillColor: session.checkOut ? '#3C50E0' : '#10B981' // Blue for completed, Green for active
+          });
+        }
       });
     } else {
-      // Optional: Add a dummy point if we want to show the name on the axis, 
-      // but typically timeline shows activity.
-      // We will skip absent users in the chart to save space/clutter, 
-      // as the table shows them as 'Absent'.
+      // Optional: Add a dummy point to force user name on axis?
+      // Apex rangeBar behaves better if row is omitted if empty.
     }
   });
 
@@ -187,7 +221,10 @@ export async function getOverviewData() {
       growthRate: 0
     },
     chartData,
-    timelineData // New field
+    timelineData: {
+      series: timelineSeriesData.length > 0 ? [{ name: 'Sessions', data: timelineSeriesData }] : [],
+    },
+    date: targetDateString
   };
 }
 
