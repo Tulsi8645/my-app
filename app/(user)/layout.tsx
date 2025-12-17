@@ -18,11 +18,31 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
-export default function RootLayout({
+import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
+import { redirect } from "next/navigation";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+
+  if (token) {
+    try {
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret-key-change-me');
+      const { payload } = await jwtVerify(token, secret);
+
+      if (payload.role === 'admin') {
+        redirect("/admin");
+      }
+    } catch (error) {
+      // Ignore invalid tokens
+    }
+  }
+
   return (
     <html lang="en">
       <body

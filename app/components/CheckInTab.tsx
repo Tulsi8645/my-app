@@ -1,9 +1,9 @@
 import React from 'react';
 import { Clock, MapPin, LogIn, LogOut, CheckCircle, AlertCircle } from 'lucide-react';
-import { Employee, Location, Result } from '../types';
+import { User, Location, Result } from '../types';
 
 interface CheckInTabProps {
-    employee: Employee | null;
+    user: User | null;
     currentTime: Date;
     location: Location | null;
     loading: boolean;
@@ -13,7 +13,7 @@ interface CheckInTabProps {
 }
 
 const CheckInTab: React.FC<CheckInTabProps> = ({
-    employee,
+    user,
     currentTime,
     location,
     loading,
@@ -30,7 +30,7 @@ const CheckInTab: React.FC<CheckInTabProps> = ({
                 <div className="flex items-center justify-between mb-8 relative z-10">
                     <div>
                         <h2 className="text-3xl font-bold tracking-tight">Good Day,</h2>
-                        <p className="text-blue-100 text-lg font-medium mt-1">{employee?.name.split(' ')[0]}</p>
+                        <p className="text-blue-100 text-lg font-medium mt-1">{user?.name.split(' ')[0]}</p>
                     </div>
                     <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
                         <Clock className="w-6 h-6 text-white" />

@@ -1,9 +1,10 @@
-export interface Employee {
+export interface User {
     _id: string;
     name: string;
     email: string;
     department: string;
     employeeId: string;
+    role: 'employee' | 'admin';
 }
 
 export interface Location {

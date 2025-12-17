@@ -1,5 +1,5 @@
 const { MongoClient, ObjectId } = require('mongodb');
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env' });
 const bcrypt = require('bcryptjs');
 
 const uri = process.env.MONGODB_URI;
@@ -9,29 +9,30 @@ async function seed() {
 
     try {
         await client.connect();
-        const db = client.db('attendance');
+        const db = client.db('officeAttendance');
 
         console.log('Connected to database...');
 
         // 1. Setup Employee
-        const hashedPassword = await bcrypt.hash('password123', 10);
-        const email = 'john.doe@company.com';
+        const hashedPassword = await bcrypt.hash('password@123', 10);
+        const email = 'suj337raut@gmail.com';
 
         // Check if user exists
-        const existingUser = await db.collection('employees').findOne({ email });
+        const existingUser = await db.collection('users').findOne({ email });
 
         if (existingUser) {
             console.log('User already exists:', email);
         } else {
             const employeeId = 'EMP-' + Date.now(); // Unique ID
-            const result = await db.collection('employees').insertOne({
-                name: 'John Doe',
+            const result = await db.collection('users').insertOne({
+                name: 'Sujeet Raut',
                 email: email,
+                department: 'Management',
                 password: hashedPassword,
                 employeeId: employeeId,
-                department: 'Engineering'
+                role: 'user'
             });
-            console.log(`Created new employee: ${employeeId} (${result.insertedId})`);
+            console.log(`Created new employee user: ${employeeId} (${result.insertedId})`);
         }
 
         console.log('Seed operation completed.');

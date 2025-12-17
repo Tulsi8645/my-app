@@ -1,11 +1,11 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { MapPin, Users, Calendar } from 'lucide-react';
-import { Employee, Location, AttendanceRecord, Stats, Result, LoginForm } from './types';
-import LoginScreen from './components/LoginScreen';
-import CheckInTab from './components/CheckInTab';
-import HistoryTab from './components/HistoryTab';
-import ProfileTab from './components/ProfileTab';
+import { User, Location, AttendanceRecord, Stats, Result, LoginForm } from '../types';
+import LoginScreen from '../components/LoginScreen';
+import CheckInTab from '../components/CheckInTab';
+import HistoryTab from '../components/HistoryTab';
+import ProfileTab from '../components/ProfileTab';
 
 function AttendanceApp() {
   const [activeTab, setActiveTab] = useState<'check-in' | 'history' | 'profile'>('check-in');
@@ -15,7 +15,7 @@ function AttendanceApp() {
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loginForm, setLoginForm] = useState<LoginForm>({ email: '', password: '' });
   const [stats, setStats] = useState<Stats | null>(null);
 
@@ -25,23 +25,23 @@ function AttendanceApp() {
   }, []);
 
   useEffect(() => {
-    const savedEmployee = localStorage.getItem('employee');
-    if (savedEmployee) {
-      setEmployee(JSON.parse(savedEmployee));
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'history' && employee) {
+    if (activeTab === 'history' && user) {
       loadHistory();
     }
-  }, [activeTab, employee]);
+  }, [activeTab, user]);
 
   useEffect(() => {
-    if (activeTab === 'profile' && employee) {
+    if (activeTab === 'profile' && user) {
       loadStats();
     }
-  }, [activeTab, employee]);
+  }, [activeTab, user]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,8 +57,14 @@ function AttendanceApp() {
       const data = await response.json();
 
       if (response.ok) {
-        setEmployee(data.employee);
-        localStorage.setItem('employee', JSON.stringify(data.employee));
+        setUser(data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        if (data.redirectUrl && data.redirectUrl !== '/') {
+          window.location.href = data.redirectUrl;
+          return;
+        }
+
         setResult(null);
         // Silent login success
       } else {
@@ -72,17 +78,17 @@ function AttendanceApp() {
   };
 
   const handleLogout = () => {
-    setEmployee(null);
-    localStorage.removeItem('employee');
+    setUser(null);
+    localStorage.removeItem('user');
     setActiveTab('check-in');
     setResult(null);
   };
 
   const loadHistory = async () => {
-    if (!employee) return;
+    if (!user) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/attendance/history?employeeId=${employee._id}`);
+      const response = await fetch(`/api/attendance/history?employeeId=${user._id}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -95,10 +101,10 @@ function AttendanceApp() {
   };
 
   const fetchTodayStatus = async () => {
-    if (!employee) return;
+    if (!user) return;
     try {
       const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`/api/attendance/history?employeeId=${employee._id}`);
+      const response = await fetch(`/api/attendance/history?employeeId=${user._id}`);
       const data = await response.json();
 
       if (response.ok && data.records.length > 0) {
@@ -130,15 +136,15 @@ function AttendanceApp() {
   };
 
   useEffect(() => {
-    if (employee) {
+    if (user) {
       fetchTodayStatus();
     }
-  }, [employee]);
+  }, [user]);
 
   const loadStats = async () => {
-    if (!employee) return;
+    if (!user) return;
     try {
-      const response = await fetch(`/api/attendance/stats?employeeId=${employee._id}`);
+      const response = await fetch(`/api/attendance/stats?employeeId=${user._id}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -214,14 +220,14 @@ function AttendanceApp() {
 
         setLocation({ lat: latitude, lng: longitude, address });
 
-        if (!employee) return;
+        if (!user) return;
 
         try {
           const response = await fetch('/api/attendance/checkin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              employeeId: employee._id,
+              employeeId: user._id,
               latitude,
               longitude,
               address, // Send readable address
@@ -287,7 +293,7 @@ function AttendanceApp() {
     );
   };
 
-  if (!employee) {
+  if (!user) {
     return (
       <LoginScreen
         loginForm={loginForm}
@@ -305,7 +311,7 @@ function AttendanceApp() {
         <div className="bg-white">
           {activeTab === 'check-in' && (
             <CheckInTab
-              employee={employee}
+              user={user}
               currentTime={currentTime}
               location={location}
               loading={loading}
@@ -322,7 +328,7 @@ function AttendanceApp() {
           )}
           {activeTab === 'profile' && (
             <ProfileTab
-              employee={employee}
+              user={user}
               stats={stats}
               handleLogout={handleLogout}
             />

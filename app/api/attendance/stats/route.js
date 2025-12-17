@@ -1,26 +1,28 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { ObjectId } from 'mongodb';
+import connectDB from '@/lib/db';
+import Attendance from '@/models/Attendance';
+import mongoose from 'mongoose';
 
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
         const employeeId = searchParams.get('employeeId');
 
-        const client = await clientPromise;
-        const db = client.db('attendance');
+        await connectDB();
 
         const startOfMonth = new Date();
         startOfMonth.setDate(1);
         startOfMonth.setHours(0, 0, 0, 0);
 
-        const records = await db
-            .collection('attendance')
-            .find({
-                employeeId: new ObjectId(employeeId),
-                date: { $gte: startOfMonth }
-            })
-            .toArray();
+        let query = {
+            date: { $gte: startOfMonth }
+        };
+
+        if (employeeId) {
+            query.employeeId = employeeId;
+        }
+
+        const records = await Attendance.find(query).lean();
 
         const stats = {
             present: records.filter(r => r.status === 'present').length,

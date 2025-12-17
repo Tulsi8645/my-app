@@ -1,26 +1,33 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { ObjectId } from 'mongodb';
+import connectDB from '@/lib/db';
+import Attendance from '@/models/Attendance';
+import mongoose from 'mongoose';
 
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
         const employeeId = searchParams.get('employeeId');
 
-        const client = await clientPromise;
-        const db = client.db('attendance');
+        await connectDB();
 
-        const records = await db
-            .collection('attendance')
-            .find({ employeeId: new ObjectId(employeeId) })
+        // Ensure employeeId is valid ObjectId if that's what we expect
+        // The checkin route stores employeeId as ObjectId (ref User).
+        // Let's assume the frontend passes the correct string.
+
+        let query = {};
+        if (employeeId) {
+            query = { employeeId: employeeId };
+        }
+
+        const records = await Attendance.find(query)
             .sort({ date: -1 })
             .limit(7)
-            .toArray();
+            .lean();
 
         const formattedRecords = records.map(record => ({
             date: record.date,
-            clockIn: record.clockIn || record.checkInTime || null,
-            clockOut: record.clockOut || record.checkOutTime || null,
+            clockIn: record.clockIn,
+            clockOut: record.clockOut,
             status: record.status,
             sessions: record.sessions ? record.sessions.map(s => ({
                 checkIn: s.checkIn,
