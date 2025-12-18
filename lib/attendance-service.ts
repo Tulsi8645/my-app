@@ -1,8 +1,6 @@
 import Attendance from '@/models/Attendance';
 import connectDB from './db';
 
-const NEPAL_OFFSET_MS = 5.75 * 60 * 60 * 1000; // 5 hours 45 minutes
-
 /**
  * Automatically clocks out employees who haven't clocked out by 6 PM Nepal time.
  * This can be called for a specific employee or for all employees.
@@ -10,7 +8,7 @@ const NEPAL_OFFSET_MS = 5.75 * 60 * 60 * 1000; // 5 hours 45 minutes
  * @param {string|null} employeeId - Optional employee ID to clean up specifically.
  * @returns {Promise<number>} - Number of records updated.
  */
-export async function performAutoCheckout(employeeId = null) {
+export async function performAutoCheckout(employeeId: string | null = null): Promise<number> {
     try {
         await connectDB();
 
@@ -38,7 +36,7 @@ export async function performAutoCheckout(employeeId = null) {
         const isPastSixPM = currentNepalHour >= 18;
 
         // 2. Build filter for "open" records that should be closed
-        const filter = {
+        const filter: any = {
             $or: [
                 { isAvailable: true },
                 { clockOut: { $exists: false } }
@@ -69,19 +67,17 @@ export async function performAutoCheckout(employeeId = null) {
         let updatedCount = 0;
         for (const record of openRecords) {
             // Set clockOut to 6 PM (12:15 UTC) of that record's day
-            // We use the record's date to get the correct calendar day
             const recordDate = new Date(record.date);
             const parts = recordDate.toLocaleDateString("en-US", {
                 timeZone: "Asia/Kathmandu",
                 year: 'numeric', month: 'numeric', day: 'numeric'
             }).split('/');
-            // Parts: [month, day, year]
 
-            const closingTime = new Date(Date.UTC(parts[2], parts[0] - 1, parts[1], 12, 15));
+            const closingTime = new Date(Date.UTC(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]), 12, 15));
 
             record.clockOut = closingTime;
             record.isAvailable = false;
-            record.status = record.status || 'present'; // Ensure status exists
+            record.status = record.status || 'present';
 
             // Close the last session if it's still open
             if (record.sessions && record.sessions.length > 0) {
