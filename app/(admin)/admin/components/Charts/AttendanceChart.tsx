@@ -20,7 +20,7 @@ const AttendanceChart: React.FC<AttendanceChartProps> = ({ series, categories })
             position: "top",
             horizontalAlign: "left",
         },
-        colors: ["#29ca52ff", "#294786ff"],
+        colors: ["#43b914ff", "#468629ff"],
         chart: {
             fontFamily: "Satoshi, sans-serif",
             height: 335,

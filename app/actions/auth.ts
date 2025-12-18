@@ -11,7 +11,9 @@ export async function logout() {
 export async function getCurrentUser() {
     const token = (await cookies()).get("token")?.value;
 
-    if (!token) return null;
+    if (!token) {
+        return null;
+    }
 
     try {
         const { jwtVerify } = await import('jose');
@@ -27,7 +29,7 @@ export async function getCurrentUser() {
         const { MongoClient, ObjectId } = await import('mongodb');
         const clientPromise = (await import('@/lib/mongodb')).default;
         const client = await clientPromise;
-        const db = client.db('attendance');
+        const db = client.db('officeAttendance');
 
         const user = await db.collection('users').findOne({ _id: new ObjectId(payload.id as string) });
 
@@ -37,7 +39,7 @@ export async function getCurrentUser() {
             name: user.name,
             email: user.email,
             role: user.role,
-            img: user.img || "/images/user/user-03.png" // Fallback if no image
+            img: user.img || null
         };
     } catch (error) {
         return null;

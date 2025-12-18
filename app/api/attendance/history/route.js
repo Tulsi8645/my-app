@@ -29,6 +29,8 @@ export async function GET(request) {
             clockIn: record.clockIn,
             clockOut: record.clockOut,
             status: record.status,
+            isAvailable: record.isAvailable,
+            onTime: record.onTime,
             sessions: record.sessions ? record.sessions.map(s => ({
                 checkIn: s.checkIn,
                 checkOut: s.checkOut || null

@@ -1,5 +1,4 @@
 import { OverviewCard } from "./card";
-import { TimeWidget } from "../time-widget";
 import * as icons from "./icons";
 
 interface OverviewCardsGroupProps {
@@ -9,11 +8,12 @@ interface OverviewCardsGroupProps {
     products: any;
     users: any;
     totalHours: any;
+    onTime: any;
   }
 }
 
 export function OverviewCardsGroup({ data }: OverviewCardsGroupProps) {
-  const { views, profit, products, users, totalHours } = data;
+  const { views, profit, products, users, totalHours, onTime } = data;
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4 2xl:gap-7.5">
@@ -35,7 +35,14 @@ export function OverviewCardsGroup({ data }: OverviewCardsGroupProps) {
         Icon={icons.Profit}
       />
 
-      <TimeWidget name="Tecobit" />
+      <OverviewCard
+        label="On Time Today"
+        data={{
+          ...onTime,
+          value: onTime.value.toString(),
+        }}
+        Icon={icons.Views}
+      />
     </div>
   );
 }

@@ -25,8 +25,9 @@ export async function GET(request) {
         const records = await Attendance.find(query).lean();
 
         const stats = {
-            present: new Set(records.filter(r => r.status === 'present').map(r => new Date(r.date).toDateString())).size,
-            late: new Set(records.filter(r => r.status === 'late').map(r => new Date(r.date).toDateString())).size
+            present: new Set(records.filter(r => r.isAvailable || r.status === 'present' || r.status === 'late').map(r => new Date(r.date).toDateString())).size,
+            late: new Set(records.filter(r => r.status === 'late' || (r.onTime === false)).map(r => new Date(r.date).toDateString())).size,
+            onTime: new Set(records.filter(r => r.onTime).map(r => new Date(r.date).toDateString())).size
         };
 
         return NextResponse.json({ stats });

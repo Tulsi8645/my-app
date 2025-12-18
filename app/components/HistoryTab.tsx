@@ -50,8 +50,10 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
             groups[dateKey].sessions?.sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime());
         });
 
-        // Convert back to array and sort desc
-        return Object.values(groups).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // Convert back to array, filter for isAvailable, and sort desc
+        return Object.values(groups)
+            .filter(record => record.isAvailable)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [history]);
 
     return (
@@ -81,76 +83,96 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {groupedHistory.map((record, index) => (
-                        <div key={index} className={`relative bg-white rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md overflow-hidden group ${record.status === 'present' ? 'border-green-100 hover:border-green-200' :
-                            record.status === 'late' ? 'border-yellow-100 hover:border-yellow-200' :
-                                'border-red-100 hover:border-red-200'
-                            }`}>
-                            {/* Decorative Background Gradient */}
-                            <div className={`absolute top-0 right-0 w-32 h-32 opacity-10 rounded-full -mr-16 -mt-16 blur-xl ${record.status === 'present' ? 'bg-green-500' :
-                                record.status === 'late' ? 'bg-yellow-500' :
-                                    'bg-red-500'
-                                }`}></div>
+                    {groupedHistory.map((record, index) => {
+                        let bgClass = 'bg-white';
+                        let borderClass = 'border-gray-100';
+                        let textClass = 'text-gray-900';
+                        let subTextClass = 'text-gray-500';
+                        let iconBgClass = 'bg-gray-100';
+                        let dateBoxClass = 'bg-white/50 text-gray-900';
 
-                            <div className="relative z-10">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center space-x-3">
-                                        <div className={`p-3 rounded-xl border ${record.status === 'present' ? 'bg-green-50 border-green-100 text-green-700' :
-                                            record.status === 'late' ? 'bg-yellow-50 border-yellow-100 text-yellow-700' :
-                                                'bg-red-50 border-red-100 text-red-700'
-                                            }`}>
-                                            <div className="text-xs font-bold uppercase tracking-wider text-center leading-none">
+                        if (record.status === 'absent') {
+                            bgClass = 'bg-gradient-to-br from-red-50 to-red-100';
+                            borderClass = 'border-red-200';
+                            textClass = 'text-red-900';
+                            subTextClass = 'text-red-700';
+                            iconBgClass = 'bg-red-200/50';
+                            dateBoxClass = 'bg-white/60 text-red-900 shadow-sm';
+                        } else if (record.onTime === false || record.status === 'late') {
+                            bgClass = 'bg-gradient-to-br from-orange-50 to-amber-100';
+                            borderClass = 'border-orange-200';
+                            textClass = 'text-orange-900';
+                            subTextClass = 'text-orange-800';
+                            iconBgClass = 'bg-orange-200/50';
+                            dateBoxClass = 'bg-white/60 text-orange-900 shadow-sm';
+                        } else {
+                            // Present / On Time
+                            bgClass = 'bg-gradient-to-br from-emerald-50 to-green-100';
+                            borderClass = 'border-emerald-200';
+                            textClass = 'text-emerald-900';
+                            subTextClass = 'text-emerald-700';
+                            iconBgClass = 'bg-emerald-200/50';
+                            dateBoxClass = 'bg-white/60 text-emerald-900 shadow-sm';
+                        }
+
+                        return (
+                            <div key={index} className={`relative rounded-3xl p-6 shadow-sm border transition-all hover:shadow-md group ${bgClass} ${borderClass}`}>
+
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center space-x-4">
+                                        {/* Date Box */}
+                                        <div className={`p-3 rounded-2xl flex flex-col items-center justify-center min-w-[3.5rem] backdrop-blur-sm ${dateBoxClass}`}>
+                                            <div className="text-xs font-bold uppercase tracking-wider leading-none opacity-80">
                                                 {new Date(record.date).toLocaleDateString(undefined, { month: 'short' })}
                                             </div>
-                                            <div className="text-xl font-black text-center leading-none mt-1">
+                                            <div className="text-2xl font-black leading-tight">
                                                 {new Date(record.date).getDate()}
                                             </div>
                                         </div>
 
                                         <div>
-                                            <div className="font-bold text-gray-900 text-lg">
+                                            <div className={`font-bold text-lg ${textClass}`}>
                                                 {new Date(record.date).toLocaleDateString(undefined, { weekday: 'long' })}
                                             </div>
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide mt-1 ${record.status === 'present' ? 'bg-green-100 text-green-700' :
-                                                record.status === 'late' ? 'bg-yellow-100 text-yellow-700' :
-                                                    'bg-red-100 text-red-700'
-                                                }`}>
-                                                {record.status}
-                                            </span>
+                                            <div className="flex flex-wrap gap-2 mt-1.5">
+                                                {record.onTime !== undefined ? (
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide bg-white/60 backdrop-blur-sm shadow-sm ${record.onTime ? 'text-emerald-700' : 'text-orange-700'}`}>
+                                                        {record.onTime ? 'On Time' : 'Late'}
+                                                    </span>
+                                                ) : record.status !== 'present' && (
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide bg-white/60 backdrop-blur-sm shadow-sm ${textClass}`}>
+                                                        {record.status}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-
-                                    {/* Status Icon/Visual */}
-                                    <div className={`w-2 h-12 rounded-full ${record.status === 'present' ? 'bg-green-500' :
-                                        record.status === 'late' ? 'bg-yellow-500' :
-                                            'bg-red-500'
-                                        }`}></div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-center">
-                                        <span className="text-xs font-medium text-gray-500 uppercase">Clock In</span>
-                                        <div className="font-bold text-gray-900 text-xl mt-0.5">
+                                    <div className={`p-4 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/20 flex flex-col justify-center`}>
+                                        <span className={`text-xs font-bold uppercase tracking-wide opacity-70 mb-1 ${subTextClass}`}>Clock In</span>
+                                        <div className={`font-black text-xl ${textClass}`}>
                                             {formatTime(record.clockIn)}
                                         </div>
                                     </div>
-                                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-center text-right">
-                                        <span className="text-xs font-medium text-gray-500 uppercase">Clock Out</span>
-                                        <div className="font-bold text-gray-900 text-xl mt-0.5">
+                                    <div className={`p-4 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/20 flex flex-col justify-center text-right`}>
+                                        <span className={`text-xs font-bold uppercase tracking-wide opacity-70 mb-1 ${subTextClass}`}>Clock Out</span>
+                                        <div className={`font-black text-xl ${textClass}`}>
                                             {formatTime(record.clockOut)}
                                         </div>
                                     </div>
                                 </div>
 
                                 {record.sessions && record.sessions.length > 0 && (
-                                    <div className="mt-4 pt-3 border-t border-gray-100">
+                                    <div className="mt-5 pt-4 border-t border-black/5">
                                         <div className="space-y-2">
                                             {record.sessions.map((session, sIdx) => (
-                                                <div key={sIdx} className="flex items-center justify-between text-sm bg-white p-2 rounded-lg border border-gray-50 shadow-sm">
-                                                    <span className="font-medium text-gray-600 bg-gray-50 px-2 py-0.5 rounded text-xs">{formatTime(session.checkIn)}</span>
-                                                    <span className="text-gray-300 mx-1">➜</span>
-                                                    <span className="font-medium text-gray-600 bg-gray-50 px-2 py-0.5 rounded text-xs">
-                                                        {session.checkOut ? formatTime(session.checkOut) : <span className="text-green-600 font-bold animate-pulse">Active</span>}
+                                                <div key={sIdx} className="flex items-center justify-between text-sm p-3 rounded-xl bg-white/40 backdrop-blur-sm border border-white/20 hover:bg-white/60 transition-colors">
+                                                    <span className={`font-bold ${textClass} opacity-90`}>{formatTime(session.checkIn)}</span>
+                                                    <span className={`${subTextClass} opacity-50`}>➜</span>
+                                                    <span className={`font-bold ${textClass} opacity-90`}>
+                                                        {session.checkOut ? formatTime(session.checkOut) : <span className="text-emerald-600 font-extrabold animate-pulse">Active</span>}
                                                     </span>
                                                 </div>
                                             ))}
@@ -158,8 +180,8 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

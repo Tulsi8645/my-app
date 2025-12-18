@@ -52,6 +52,12 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, stats, handleLogout }) =>
                         <div className="text-3xl font-bold text-yellow-500 mb-1">{stats.late || 0}</div>
                         <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Days Late</div>
                     </div>
+                    {stats.onTime !== undefined && (
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center transition-transform hover:scale-[1.02] col-span-2">
+                            <div className="text-3xl font-bold text-emerald-500 mb-1">{stats.onTime}</div>
+                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">On Time Check-ins</div>
+                        </div>
+                    )}
                 </div>
             )}
 

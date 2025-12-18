@@ -40,6 +40,13 @@ const AttendanceSchema = new Schema(
             enum: ['present', 'late', 'absent', 'leave'],
             default: 'present',
         },
+        isAvailable: {
+            type: Boolean,
+            default: false,
+        },
+        onTime: {
+            type: Boolean,
+        },
         sessions: [SessionSchema],
     },
     { timestamps: true }

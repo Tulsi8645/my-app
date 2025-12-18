@@ -21,8 +21,8 @@ const AttendanceTimeline: React.FC<AttendanceTimelineProps> = ({ series, selecte
     const dateValue = selectedDate || new Date().toISOString().split('T')[0];
 
     // 24 Hour View
-    const minTime = new Date(dateValue).setHours(0, 0, 0, 0);
-    const maxTime = new Date(dateValue).setHours(23, 59, 59, 999);
+    const minTime = new Date(dateValue).setHours(8, 0, 0, 0);
+    const maxTime = new Date(dateValue).setHours(20, 59, 59, 999);
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = e.target.value;
@@ -67,7 +67,7 @@ const AttendanceTimeline: React.FC<AttendanceTimelineProps> = ({ series, selecte
             labels: {
                 datetimeUTC: false, // Force local time
                 style: {
-                    colors: '#94a3b8' // Slate-400
+                    colors: '#dd751fff' // Slate-400
                 },
                 datetimeFormatter: {
                     year: 'yyyy',
@@ -80,7 +80,7 @@ const AttendanceTimeline: React.FC<AttendanceTimelineProps> = ({ series, selecte
         yaxis: {
             labels: {
                 style: {
-                    colors: '#94a3b8' // Slate-400
+                    colors: '#558813ff' // Slate-400
                 }
             }
         },
@@ -91,7 +91,7 @@ const AttendanceTimeline: React.FC<AttendanceTimelineProps> = ({ series, selecte
             show: true,
             position: 'top',
             labels: {
-                colors: '#94a3b8'
+                colors: '#35c548ff'
             }
         },
         tooltip: {

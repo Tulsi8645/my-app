@@ -22,11 +22,6 @@ export async function getOverviewData(dateParam?: string) {
     targetDateString = nepalTime.toISOString().split('T')[0];
   }
 
-  // Calculate Query Range in UTC
-  // targetDateString is 'YYYY-MM-DD' representing a Nepal Date.
-  // We want 00:00 Nepal Time to 24:00 Nepal Time.
-  // 00:00 Nepal Time = (UTC Midnight of Date) - 5h 45m
-  // Wait, Date('YYYY-MM-DD') is usually UTC midnight.
 
   const dateParts = targetDateString!.split('-');
   const year = parseInt(dateParts[0]);
@@ -59,9 +54,15 @@ export async function getOverviewData(dateParam?: string) {
       }
     },
     {
+      // Ensure employeeId is ObjectId for lookup
+      $addFields: {
+        employeeIdObj: { $toObjectId: "$employeeId" }
+      }
+    },
+    {
       $lookup: {
         from: "users",
-        localField: "employeeId",
+        localField: "employeeIdObj",
         foreignField: "_id",
         as: "user"
       }
@@ -72,6 +73,8 @@ export async function getOverviewData(dateParam?: string) {
         status: 1,
         employeeId: 1,
         sessions: 1,
+        isAvailable: 1,
+        onTime: 1,
         checkInTime: 1,
         employeeName: { $ifNull: ["$user.name", "Unknown"] }
       }
@@ -81,32 +84,39 @@ export async function getOverviewData(dateParam?: string) {
   // Deduplicate records by employeeId for counts
   // If an employee has multiple docs, we count them once.
   // Use sets to track unique employee IDs for each status.
-  const presentEmployeeIds = new Set();
-  const lateEmployeeIds = new Set();
-  const checkedInEmployeeIds = new Set();
+  const presentEmployeeIds = new Set<string>();
+  const lateEmployeeIds = new Set<string>();
+  const onTimeEmployeeIds = new Set<string>();
+  const checkedInEmployeeIds = new Set<string>();
 
   todayRecords.forEach((r: any) => {
     const eid = r.employeeId.toString();
     checkedInEmployeeIds.add(eid);
 
-    if (r.status === 'present') presentEmployeeIds.add(eid);
-    if (r.status === 'late') lateEmployeeIds.add(eid);
+    // Present if checked in (isAvailable) or status is present/late
+    if (r.isAvailable || r.status === 'present' || r.status === 'late') presentEmployeeIds.add(eid);
+    if (r.status === 'late' || r.onTime === false) lateEmployeeIds.add(eid);
+    if (r.onTime === true) onTimeEmployeeIds.add(eid);
   });
 
   const presentCount = presentEmployeeIds.size;
   const lateCount = lateEmployeeIds.size;
+  const onTimeCount = onTimeEmployeeIds.size;
   const checkedInCount = checkedInEmployeeIds.size;
   const absentCount = Math.max(0, totalUsers - checkedInCount);
 
   // Extract unique names
-  // We need to map the IDs back to names. We can find the name from any record of that ID.
-  const uniquePresentNames = Array.from(presentEmployeeIds).map(id => {
+  const uniquePresentNames = (Array.from(presentEmployeeIds) as string[]).map((id: string) => {
     const record = todayRecords.find((r: any) => r.employeeId.toString() === id);
-    return record?.employeeName || 'Unknown';
+    return record?.employeeName && record.employeeName !== 'Unknown' ? record.employeeName : `User (${id.substring(id.length - 4)})`;
   });
-  const uniqueLateNames = Array.from(lateEmployeeIds).map(id => {
+  const uniqueLateNames = (Array.from(lateEmployeeIds) as string[]).map((id: string) => {
     const record = todayRecords.find((r: any) => r.employeeId.toString() === id);
-    return record?.employeeName || 'Unknown';
+    return record?.employeeName && record.employeeName !== 'Unknown' ? record.employeeName : `User (${id.substring(id.length - 4)})`;
+  });
+  const uniqueOnTimeNames = (Array.from(onTimeEmployeeIds) as string[]).map((id: string) => {
+    const record = todayRecords.find((r: any) => r.employeeId.toString() === id);
+    return record?.employeeName && record.employeeName !== 'Unknown' ? record.employeeName : `User (${id.substring(id.length - 4)})`;
   });
 
   // 3. Total Hours Logged (All Time or This Month)
@@ -238,6 +248,11 @@ export async function getOverviewData(dateParam?: string) {
       value: absentCount,
       growthRate: 0,
     },
+    onTime: { // On Time
+      value: onTimeCount,
+      growthRate: 0,
+      names: uniqueOnTimeNames
+    },
     users: { // Total Users
       value: totalUsers,
       growthRate: 0,
@@ -364,10 +379,18 @@ export async function getAttendanceLogs() {
       department: user.department || 'N/A',
       role: user.role,
       date: today.toLocaleDateString(),
-      checkIn: firstSession ? new Date(firstSession.checkIn).toLocaleTimeString() : '-',
-      checkOut: (lastSession && lastSession.checkOut) ? new Date(lastSession.checkOut).toLocaleTimeString() : (firstSession ? 'Active' : '-'),
+      checkIn: firstSession ? new Date(firstSession.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+      checkOut: (lastSession && lastSession.checkOut) ? new Date(lastSession.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (firstSession ? 'Active' : '-'),
       status: record?.status || 'absent',
-      location: firstSession?.address || 'Unknown'
+      onTime: record?.onTime,
+      location: firstSession?.checkInLocation?.address || 'Unknown',
+      sessionsCount: sessions.length,
+      sessions: sessions.map((s: any) => ({
+        checkIn: s.checkIn,
+        checkOut: s.checkOut,
+        checkInLocation: s.checkInLocation,
+        checkOutLocation: s.checkOutLocation
+      }))
     };
   });
 

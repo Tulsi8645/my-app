@@ -17,6 +17,15 @@ export default async function Home(props: HomeProps) {
 
   return (
     <>
+      <div className="mb-6 flex flex-col gap-2">
+        <h2 className="text-2xl font-bold text-dark dark:text-white">
+          Overview Workspace
+        </h2>
+        <p className="text-sm font-medium text-gray-500">
+          Welcome back! Here is what is happening with attendance today.
+        </p>
+      </div>
+
       <Suspense fallback={<OverviewCardsSkeleton />}>
         <OverviewCardsGroup data={overviewData} />
       </Suspense>
@@ -26,7 +35,6 @@ export default async function Home(props: HomeProps) {
           series={overviewData.timelineData.series}
           selectedDate={overviewData.date || date}
         />
-
       </div>
     </>
   );

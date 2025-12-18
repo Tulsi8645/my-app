@@ -15,17 +15,35 @@ type PropsType = {
 export function OverviewCard({ label, data, Icon }: PropsType) {
   const isDecreasing = data.growthRate < 0;
 
-  const borderClass = label.includes("Present")
+  const statusColor = (label.includes("Present") || label.includes("On Time"))
+    ? "text-green-500"
+    : label.includes("Late")
+      ? "text-yellow-500"
+      : "text-primary";
+
+  const borderClass = (label.includes("Present") || label.includes("On Time"))
     ? "border-l-4 border-green-500"
     : label.includes("Late")
       ? "border-l-4 border-yellow-500"
       : "border-l-4 border-primary";
 
+  const gradientClass = label.includes("Present")
+    ? "from-emerald-50 to-white dark:from-emerald-500/5 dark:to-gray-dark"
+    : label.includes("Late")
+      ? "from-amber-50 to-white dark:from-amber-500/5 dark:to-gray-dark"
+      : label.includes("On Time")
+        ? "from-blue-50 to-white dark:from-blue-500/5 dark:to-gray-dark"
+        : "bg-white dark:bg-gray-dark";
+
   return (
-    <div className={cn("relative rounded-[10px] bg-white p-6 shadow-1 dark:bg-gray-dark group hover:shadow-2 hover:z-30 transition-all", borderClass)}>
+    <div className={cn(
+      "relative rounded-2xl p-6 shadow-sm border border-stroke dark:border-strokedark transition-all hover:shadow-lg group bg-gradient-to-br",
+      gradientClass,
+      borderClass
+    )}>
       <div className="flex items-start justify-between">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-meta-4">
-          <Icon className="h-6 w-6 text-primary" />
+        <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl shadow-inner border border-white/20 dark:border-white/10", label.includes("Present") ? "bg-green-500/10" : label.includes("Late") ? "bg-yellow-500/10" : "bg-primary/10")}>
+          <Icon className={cn("h-6 w-6", statusColor)} />
         </div>
         {/* Growth Rate / Trend */}
         <div className={cn("flex items-center gap-1 text-sm font-bold", isDecreasing ? "text-red-500" : "text-green-500")}>

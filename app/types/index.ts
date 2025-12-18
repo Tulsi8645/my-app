@@ -25,6 +25,8 @@ export interface Session {
 export interface AttendanceRecord {
     date: string;
     status: 'present' | 'late' | 'absent';
+    isAvailable?: boolean;
+    onTime?: boolean;
     clockIn?: string;
     clockOut?: string;
     sessions?: Session[];
@@ -34,6 +36,7 @@ export interface AttendanceRecord {
 export interface Stats {
     present: number;
     late: number;
+    onTime?: number;
 }
 
 export interface ResultDetails {
