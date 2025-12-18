@@ -18,8 +18,9 @@ export async function POST(request) {
             month: '2-digit',
             day: '2-digit'
         });
-        const today = new Date(nepalDateStr);
-        today.setHours(0, 0, 0, 0);
+        const [m, d, y] = nepalDateStr.split('/');
+        const utcBase = Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d));
+        const today = new Date(utcBase - (5.75 * 60 * 60 * 1000));
 
         // Auto-checkout for previous days or today (if past 6 PM)
         await performAutoCheckout(employeeId);

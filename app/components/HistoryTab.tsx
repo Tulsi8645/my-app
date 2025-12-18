@@ -50,9 +50,8 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
             groups[dateKey].sessions?.sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime());
         });
 
-        // Convert back to array, filter for isAvailable, and sort desc
+        // Convert back to array and sort desc
         return Object.values(groups)
-            .filter(record => record.isAvailable)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [history]);
 

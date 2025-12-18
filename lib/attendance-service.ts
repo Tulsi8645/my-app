@@ -29,9 +29,9 @@ export async function performAutoCheckout(employeeId: string | null = null): Pro
             hour12: false
         }).format(now));
 
-        // Nepal Today 00:00:00 (Runtime-relative, matching app's 'today' construction)
-        const today = new Date(nepalDateStr);
-        today.setHours(0, 0, 0, 0);
+        const [m, d, y] = nepalDateStr.split('/');
+        const utcBase = Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d));
+        const today = new Date(utcBase - (5.75 * 60 * 60 * 1000));
 
         const isPastSixPM = currentNepalHour >= 18;
 
