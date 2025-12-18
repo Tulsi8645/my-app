@@ -2,9 +2,11 @@ import connectDB from "@/lib/db";
 import Attendance from "@/models/Attendance";
 import User from "@/models/User";
 import mongoose from "mongoose";
+import { performAutoCheckout } from "@/lib/attendance-service";
 
 export async function getOverviewData(dateParam?: string) {
   await connectDB();
+  await performAutoCheckout();
 
   // 1. Total Users (Employees)
   const totalUsers = await User.countDocuments({ role: { $ne: 'admin' } }); // Assuming 'user' or just not admin
@@ -340,6 +342,7 @@ export async function getChatsData() {
 
 export async function getAttendanceLogs() {
   await connectDB();
+  await performAutoCheckout();
 
   // 1. Define Today
   const nepalDateStr = new Date().toLocaleDateString("en-US", {

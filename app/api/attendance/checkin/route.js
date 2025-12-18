@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Attendance from '@/models/Attendance';
 import { getClientIP } from '@/lib/utils';
+import { performAutoCheckout } from '@/lib/attendance-service';
 
 export async function POST(request) {
     try {
@@ -20,87 +21,9 @@ export async function POST(request) {
         const today = new Date(nepalDateStr);
         today.setHours(0, 0, 0, 0);
 
-        // Lazy Cleanup: Check for previous day's forgotten checkout
-        const previousOpenRecord = await Attendance.findOne({
-            employeeId,
-            date: { $lt: today },
-            clockOut: { $exists: false } // Check if clockOut is missing
-        }).sort({ date: -1 });
+        // Auto-checkout for previous days or today (if past 6 PM)
+        await performAutoCheckout(employeeId);
 
-        if (previousOpenRecord) {
-            // Found a forgotten checkout
-            const recordDate = new Date(previousOpenRecord.date);
-            // Create 6 PM (18:00) timestamp for that day in Nepal Time? 
-            // We need to set it relative to that day.
-            // Assuming the date stored is 00:00 UTC or Local? stored date is usually UTC normalized or just date.
-            // Let's assume we construct 6 PM on the record's date.
-
-            // Reconstruct the date in Nepal Time to be safe? 
-            // Or just take the JS date object and set hours if we trust the date object is correct day.
-            // MongoDB stores as Date.
-
-            const autoClockOutTime = new Date(recordDate);
-            // This might set it to 00:00 UTC. 
-            // We want 18:00 Nepal Time.
-            // Nepal is UTC+5:45. 18:00 Nepal = 12:15 UTC.
-            // Let's try to be precise.
-
-            // Convert recordDate to Nepal date string to get YYYY-MM-DD
-            const recNepalDateStr = recordDate.toLocaleDateString("en-US", {
-                timeZone: "Asia/Kathmandu",
-                year: 'numeric',
-                month: 'numeric', // numeric is easier to parse? or just use parts
-                day: 'numeric'
-            });
-            // Actually recordDate from DB should be treated as the day. 
-            // Let's blindly set time to 6 PM local if we assume the server is... wait server time might differ.
-            // Safest is to work with UTC if we know the offset, or use toLocaleString if we trust the runtime TZ data.
-            // Let's assume we want 18:00 Nepal Time.
-
-            // 18:00 Nepal Time = 18 - 5.75 = 12.25 UTC = 12:15 UTC.
-            // So we add 12h 15m to the start of day (UTC)? 
-            // If date is stored as 00:00 UTC (which likely it is if we did setHours(0,0,0,0) previously without timezone info or with UTC), then adding hours works.
-
-            // However, existing code uses:
-            // nepalDateStr = new Date().toLocaleDateString("en-US", {timeZone: "Asia/Kathmandu"...})
-            // today = new Date(nepalDateStr) -> This uses local server time for parsing "MM/DD/YYYY".
-            // If server is UTC, checkIn code sets hours 0,0,0,0.
-
-            // Let's set the time explicitly using a constructed string to be safe across timezones
-            const dateParts = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'Asia/Kathmandu',
-                year: 'numeric', month: '2-digit', day: '2-digit'
-            }).formatToParts(recordDate);
-
-            // Parts: month, literal, day, literal, year
-            // This is getting complicated.
-
-            // Simpler: Just set hours to 18, mins 0 if we assume the date object is "start of day".
-            // If we want roughly 6 PM.
-            // Let's do:
-            // const closingTime = new Date(recordDate);
-            // closingTime.setHours(18, 0, 0, 0); 
-            // Wait, if recordDate is 2025-12-17T00:00:00.000Z. setHours(18) makes it 18:00 UTC.
-            // 18:00 UTC is 23:45 Nepal. That is almost midnight. Close enough?
-            // User requested 6 PM. 
-            // 6 PM Nepal is 12:15 UTC.
-            // So if base is 00:00 UTC, we want 12:15.
-
-            const closingTime = new Date(recordDate);
-            closingTime.setUTCHours(12, 15, 0, 0); // 12:15 UTC = 18:00 Nepal
-
-            previousOpenRecord.clockOut = closingTime;
-
-            // Also close the last session
-            const lastSession = previousOpenRecord.sessions[previousOpenRecord.sessions.length - 1];
-            if (lastSession && !lastSession.checkOut) {
-                lastSession.checkOut = closingTime;
-                // Location? Maybe mark as "Auto-Checkout"?
-                // db schema has location object. leave empty or defaults.
-            }
-
-            await previousOpenRecord.save();
-        }
 
         // Find today's attendance record
         let attendance = await Attendance.findOne({
@@ -159,6 +82,8 @@ export async function POST(request) {
                 }
 
                 attendance.sessions.push(newSession);
+                attendance.isAvailable = true;
+                attendance.clockOut = undefined; // Clear previous checkout if it exists
                 await attendance.save();
 
             } else {
@@ -202,6 +127,7 @@ export async function POST(request) {
 
             // Also update root clockOut
             attendance.clockOut = new Date(timestamp);
+            attendance.isAvailable = false;
 
             await attendance.save();
         }

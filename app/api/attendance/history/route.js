@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Attendance from '@/models/Attendance';
 import mongoose from 'mongoose';
+import { performAutoCheckout } from '@/lib/attendance-service';
 
 export async function GET(request) {
     try {
@@ -9,6 +10,7 @@ export async function GET(request) {
         const employeeId = searchParams.get('employeeId');
 
         await connectDB();
+        await performAutoCheckout(employeeId);
 
         // Ensure employeeId is valid ObjectId if that's what we expect
         // The checkin route stores employeeId as ObjectId (ref User).
