@@ -78,18 +78,36 @@ export async function getOverviewData(dateParam?: string) {
     }
   ]);
 
-  const presentRecords = todayRecords.filter((r: any) => r.status === 'present');
-  const lateRecords = todayRecords.filter((r: any) => r.status === 'late');
+  // Deduplicate records by employeeId for counts
+  // If an employee has multiple docs, we count them once.
+  // Use sets to track unique employee IDs for each status.
+  const presentEmployeeIds = new Set();
+  const lateEmployeeIds = new Set();
+  const checkedInEmployeeIds = new Set();
 
-  const presentCount = presentRecords.length;
-  const lateCount = lateRecords.length;
-  // Absent is roughly Total - (Present + Late)
-  const checkedInCount = presentCount + lateCount;
+  todayRecords.forEach((r: any) => {
+    const eid = r.employeeId.toString();
+    checkedInEmployeeIds.add(eid);
+
+    if (r.status === 'present') presentEmployeeIds.add(eid);
+    if (r.status === 'late') lateEmployeeIds.add(eid);
+  });
+
+  const presentCount = presentEmployeeIds.size;
+  const lateCount = lateEmployeeIds.size;
+  const checkedInCount = checkedInEmployeeIds.size;
   const absentCount = Math.max(0, totalUsers - checkedInCount);
 
-  // Extract names
-  const presentNames = presentRecords.map((r: any) => r.employeeName);
-  const lateNames = lateRecords.map((r: any) => r.employeeName);
+  // Extract unique names
+  // We need to map the IDs back to names. We can find the name from any record of that ID.
+  const uniquePresentNames = Array.from(presentEmployeeIds).map(id => {
+    const record = todayRecords.find((r: any) => r.employeeId.toString() === id);
+    return record?.employeeName || 'Unknown';
+  });
+  const uniqueLateNames = Array.from(lateEmployeeIds).map(id => {
+    const record = todayRecords.find((r: any) => r.employeeId.toString() === id);
+    return record?.employeeName || 'Unknown';
+  });
 
   // 3. Total Hours Logged (All Time or This Month)
   const totalHoursResult = await Attendance.aggregate([
@@ -155,11 +173,19 @@ export async function getOverviewData(dateParam?: string) {
   const allUsers = await User.find({ role: { $ne: 'admin' } }).lean();
 
   // Create a map of attendance by employee ID string
+  // Merge sessions if multiple records exist for same employee
   const attendanceMap = new Map();
   todayRecords.forEach((record: any) => {
-    // Robust check for employeeId
     if (record.employeeId) {
-      attendanceMap.set(record.employeeId.toString(), record);
+      const eid = record.employeeId.toString();
+      if (!attendanceMap.has(eid)) {
+        attendanceMap.set(eid, { ...record, sessions: [...(record.sessions || [])] });
+      } else {
+        const existing = attendanceMap.get(eid);
+        if (record.sessions) {
+          existing.sessions.push(...record.sessions);
+        }
+      }
     }
   });
 
@@ -201,12 +227,12 @@ export async function getOverviewData(dateParam?: string) {
     views: { // Present
       value: presentCount,
       growthRate: 0,
-      names: presentNames
+      names: uniquePresentNames
     },
     profit: { // Late
       value: lateCount,
       growthRate: 0,
-      names: lateNames
+      names: uniqueLateNames
     },
     products: { // Absent
       value: absentCount,

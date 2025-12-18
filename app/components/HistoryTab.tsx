@@ -17,6 +17,43 @@ const formatTime = (isoString: string | undefined | null) => {
 };
 
 const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
+    // Group history by date to merge duplicate documents
+    const groupedHistory = React.useMemo(() => {
+        const groups: { [key: string]: AttendanceRecord } = {};
+
+        history.forEach(record => {
+            const dateKey = new Date(record.date).toDateString();
+            if (!groups[dateKey]) {
+                groups[dateKey] = { ...record, sessions: [...(record.sessions || [])] };
+            } else {
+                // Merge sessions
+                groups[dateKey].sessions = [
+                    ...(groups[dateKey].sessions || []),
+                    ...(record.sessions || [])
+                ];
+                // Update clock times to cover the full merged range
+                const currentStart = groups[dateKey].clockIn ? new Date(groups[dateKey].clockIn!).getTime() : Infinity;
+                const newStart = record.clockIn ? new Date(record.clockIn).getTime() : Infinity;
+                if (newStart < currentStart) groups[dateKey].clockIn = record.clockIn;
+
+                const currentEnd = groups[dateKey].clockOut ? new Date(groups[dateKey].clockOut!).getTime() : 0;
+                const newEnd = record.clockOut ? new Date(record.clockOut).getTime() : 0;
+                if (newEnd > currentEnd) groups[dateKey].clockOut = record.clockOut;
+
+                // If merged record has a later status (e.g. present vs active), take the more final one? 
+                // Creating a simplified status logic: if any is present/late, take that.
+                if (record.status !== 'absent' && groups[dateKey].status === 'absent') {
+                    groups[dateKey].status = record.status;
+                }
+            }
+            // Sort sessions chronologically (Earliest first) so the latest 'Active' session is at the bottom
+            groups[dateKey].sessions?.sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime());
+        });
+
+        // Convert back to array and sort desc
+        return Object.values(groups).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [history]);
+
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
@@ -34,7 +71,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
                     <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
                     <p className="text-gray-500 font-medium animate-pulse">Loading history...</p>
                 </div>
-            ) : history.length === 0 ? (
+            ) : groupedHistory.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="bg-gray-50 p-6 rounded-full mb-4">
                         <Calendar className="w-12 h-12 text-gray-400" />
@@ -44,7 +81,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history, loading }) => {
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {history.map((record, index) => (
+                    {groupedHistory.map((record, index) => (
                         <div key={index} className={`relative bg-white rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md overflow-hidden group ${record.status === 'present' ? 'border-green-100 hover:border-green-200' :
                             record.status === 'late' ? 'border-yellow-100 hover:border-yellow-200' :
                                 'border-red-100 hover:border-red-200'

@@ -20,9 +20,9 @@ const AttendanceTimeline: React.FC<AttendanceTimelineProps> = ({ series, selecte
     // Default to today if no date selected
     const dateValue = selectedDate || new Date().toISOString().split('T')[0];
 
-    // 8 AM to 8 PM view
-    const minTime = new Date(dateValue).setHours(8, 0, 0, 0);
-    const maxTime = new Date(dateValue).setHours(20, 0, 0, 0);
+    // 24 Hour View
+    const minTime = new Date(dateValue).setHours(0, 0, 0, 0);
+    const maxTime = new Date(dateValue).setHours(23, 59, 59, 999);
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = e.target.value;
@@ -56,7 +56,7 @@ const AttendanceTimeline: React.FC<AttendanceTimelineProps> = ({ series, selecte
                 rangeBarGroupRows: true
             }
         },
-        colors: ["#30c95eff"],
+        colors: ["#30c96bff"],
         fill: {
             type: 'solid'
         },
@@ -85,7 +85,7 @@ const AttendanceTimeline: React.FC<AttendanceTimelineProps> = ({ series, selecte
             }
         },
         grid: {
-            borderColor: '#334155'
+            borderColor: '#38d138ff'
         },
         legend: {
             show: true,
