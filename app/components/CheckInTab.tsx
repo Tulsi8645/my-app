@@ -30,6 +30,13 @@ const CheckInTab: React.FC<CheckInTabProps> = ({
         }
     }, [cooldown]);
 
+    const getGreeting = () => {
+        const hour = currentTime.getHours();
+        if (hour < 12) return 'Good Morning,';
+        if (hour < 17) return 'Good Afternoon,';
+        return 'Good Evening,';
+    };
+
     const onAction = (type: 'checkin' | 'checkout') => {
         if (cooldown > 0) return;
         handleCheckIn(type);
@@ -44,7 +51,7 @@ const CheckInTab: React.FC<CheckInTabProps> = ({
 
                 <div className="flex items-center justify-between mb-8 relative z-10">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">Good Day,</h2>
+                        <h2 className="text-3xl font-bold tracking-tight">{getGreeting()}</h2>
                         <p className="text-blue-100 text-lg font-medium mt-1">{user?.name.split(' ')[0]}</p>
                     </div>
                     <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
