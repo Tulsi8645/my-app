@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { OverviewCardsGroup } from "./_components/overview-cards";
 import { OverviewCardsSkeleton } from "./_components/overview-cards/skeleton";
-import { getAttendanceLogs, getOverviewData } from "./fetch";
+import { getOverviewData } from "./fetch";
 import AttendanceTimeline from "../components/Charts/AttendanceTimeline";
 
 interface HomeProps {

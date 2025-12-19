@@ -14,8 +14,8 @@ async function seed() {
         console.log('Connected to database...');
 
         // 1. Setup Employee
-        const hashedPassword = await bcrypt.hash('password@123', 10);
-        const email = 'dhirajbudha22@gmail.com';
+        const hashedPassword = await bcrypt.hash('password123', 10);
+        const email = 'sanjayguwaju@gmail.com';
 
         // Check if user exists
         const existingUser = await db.collection('users').findOne({ email });
@@ -25,9 +25,9 @@ async function seed() {
         } else {
             const employeeId = 'EMP-' + Date.now(); // Unique ID
             const result = await db.collection('users').insertOne({
-                name: 'Dhiraj Budha',
+                name: 'Sanjay Guwaju',
                 email: email,
-                department: 'Management',
+                department: 'IT',
                 password: hashedPassword,
                 employeeId: employeeId,
                 role: 'user'

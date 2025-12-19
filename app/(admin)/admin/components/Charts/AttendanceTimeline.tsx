@@ -65,22 +65,22 @@ const AttendanceTimeline: React.FC<AttendanceTimelineProps> = ({ series, selecte
             min: minTime,
             max: maxTime,
             labels: {
-                datetimeUTC: false, // Force local time
+                datetimeUTC: false,
                 style: {
-                    colors: '#dd751fff' // Slate-400
+                    colors: ['#FFFFFF']
                 },
                 datetimeFormatter: {
                     year: 'yyyy',
                     month: 'MMM \'yy',
                     day: 'dd MMM',
-                    hour: 'hh:mm tt' // 12-hour format for readability
+                    hour: 'hh:mm tt'
                 }
             }
         },
         yaxis: {
             labels: {
                 style: {
-                    colors: '#558813ff' // Slate-400
+                    colors: ['#FFFFFF']
                 }
             }
         },
