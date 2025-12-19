@@ -66,14 +66,48 @@ export async function performAutoCheckout(employeeId: string | null = null): Pro
 
         let updatedCount = 0;
         for (const record of openRecords) {
-            // Set clockOut to 6 PM (12:15 UTC) of that record's day
             const recordDate = new Date(record.date);
+            const isToday = recordDate.getTime() === today.getTime();
+
+            // Get the start time of the session we are closing
+            let sessionStartTime = record.clockIn;
+            if (record.sessions && record.sessions.length > 0) {
+                const lastSession = record.sessions[record.sessions.length - 1];
+                if (!lastSession.checkIn) continue;
+                sessionStartTime = lastSession.checkIn;
+            }
+
+            if (!sessionStartTime) continue;
+
+            const sessionStartHourNepal = parseInt(new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Kathmandu',
+                hour: 'numeric',
+                hour12: false
+            }).format(new Date(sessionStartTime)));
+
+            // If they clocked in AFTER 6 PM today, skip auto-checkout (let them work)
+            if (isToday && sessionStartHourNepal >= 18) {
+                continue;
+            }
+
+            // Set clockOut to 6 PM (12:15 UTC) or 11:59 PM (18:14 UTC) of that record's day
             const parts = recordDate.toLocaleDateString("en-US", {
                 timeZone: "Asia/Kathmandu",
                 year: 'numeric', month: 'numeric', day: 'numeric'
             }).split('/');
 
-            const closingTime = new Date(Date.UTC(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]), 12, 15));
+            let utcH = 12;
+            let utcM = 15;
+            let label = '6:00 PM';
+
+            // If they started after 6 PM (on a previous day), close at 11:59 PM to ensure positive duration
+            if (sessionStartHourNepal >= 18) {
+                utcH = 18;
+                utcM = 14;
+                label = '11:59 PM';
+            }
+
+            const closingTime = new Date(Date.UTC(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]), utcH, utcM));
 
             record.clockOut = closingTime;
             record.isAvailable = false;
@@ -85,8 +119,9 @@ export async function performAutoCheckout(employeeId: string | null = null): Pro
                 if (!lastSession.checkOut) {
                     lastSession.checkOut = closingTime;
                     lastSession.checkOutIP = 'system-auto';
+                    lastSession.checkOutDevice = 'System (Auto)';
                     lastSession.checkOutLocation = {
-                        address: 'Auto Clock-out (6:00 PM)',
+                        address: `Auto Clock-out (${label})`,
                         latitude: null,
                         longitude: null
                     };

@@ -20,6 +20,8 @@ type Session = {
     checkInLocation?: { address: string };
     checkOut?: string | Date;
     checkOutLocation?: { address: string };
+    checkInDevice?: string;
+    checkOutDevice?: string;
 };
 
 type AttendanceLog = {
@@ -164,10 +166,16 @@ export function AttendanceTable({ logs }: { logs: AttendanceLog[] }) {
                                                                         <div className="bg-white/5 p-3 flex flex-col">
                                                                             <span className="text-[8px] font-black text-green-400 uppercase tracking-widest mb-1">Check In</span>
                                                                             <span className="text-xs font-black text-white">{formatTime(session.checkIn)}</span>
+                                                                            {session.checkInDevice && (
+                                                                                <span className="text-[7px] text-white/30 truncate mt-1">{session.checkInDevice}</span>
+                                                                            )}
                                                                         </div>
                                                                         <div className="bg-white/[0.02] p-3 flex flex-col border-l border-white/5">
                                                                             <span className="text-[8px] font-black text-red-400 uppercase tracking-widest mb-1">Check Out</span>
                                                                             <span className="text-xs font-black text-white">{formatTime(session.checkOut)}</span>
+                                                                            {session.checkOutDevice && (
+                                                                                <span className="text-[7px] text-white/30 truncate mt-1">{session.checkOutDevice}</span>
+                                                                            )}
                                                                         </div>
                                                                     </div>
 
@@ -197,7 +205,7 @@ export function AttendanceTable({ logs }: { logs: AttendanceLog[] }) {
                                     <div className="flex flex-col items-center">
                                         <span className="text-green-500 inline-flex items-center gap-1">
                                             <ArrowUpRight size={14} strokeWidth={3} className="opacity-50" />
-                                            {log.checkIn}
+                                            {formatTime(log.checkIn)}
                                         </span>
                                     </div>
                                 </td>
@@ -209,7 +217,7 @@ export function AttendanceTable({ logs }: { logs: AttendanceLog[] }) {
                                             log.checkOut === 'Active' ? "text-blue-500 italic animate-pulse" : "text-red-500/80"
                                         )}>
                                             <ArrowDownRight size={14} strokeWidth={3} className="opacity-50" />
-                                            {log.checkOut}
+                                            {formatTime(log.checkOut)}
                                         </span>
                                     </div>
                                 </td>

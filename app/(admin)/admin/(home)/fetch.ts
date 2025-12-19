@@ -383,8 +383,8 @@ export async function getAttendanceLogs() {
       department: user.department || 'N/A',
       role: user.role,
       date: today.toLocaleDateString(),
-      checkIn: firstSession ? new Date(firstSession.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
-      checkOut: (lastSession && lastSession.checkOut) ? new Date(lastSession.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (firstSession ? 'Active' : '-'),
+      checkIn: firstSession ? firstSession.checkIn : '-',
+      checkOut: (lastSession && lastSession.checkOut) ? lastSession.checkOut : (firstSession ? 'Active' : '-'),
       status: record?.status || 'absent',
       onTime: record?.onTime,
       location: firstSession?.checkInLocation?.address || 'Unknown',
@@ -393,7 +393,9 @@ export async function getAttendanceLogs() {
         checkIn: s.checkIn,
         checkOut: s.checkOut,
         checkInLocation: s.checkInLocation,
-        checkOutLocation: s.checkOutLocation
+        checkOutLocation: s.checkOutLocation,
+        checkInDevice: s.checkInDevice,
+        checkOutDevice: s.checkOutDevice
       }))
     };
   });

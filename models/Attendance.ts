@@ -16,6 +16,8 @@ const SessionSchema = new Schema({
     checkOutLocation: LocationSchema,
     checkInIP: String,
     checkOutIP: String,
+    checkInDevice: String,
+    checkOutDevice: String,
 }, { _id: false });
 
 const AttendanceSchema = new Schema(

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, MapPin, LogIn, LogOut, CheckCircle, AlertCircle } from 'lucide-react';
 import { User, Location, Result } from '../types';
 
@@ -21,6 +21,21 @@ const CheckInTab: React.FC<CheckInTabProps> = ({
     handleCheckIn,
     isCheckedIn
 }) => {
+    const [cooldown, setCooldown] = useState(0);
+
+    useEffect(() => {
+        if (cooldown > 0) {
+            const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [cooldown]);
+
+    const onAction = (type: 'checkin' | 'checkout') => {
+        if (cooldown > 0) return;
+        handleCheckIn(type);
+        setCooldown(60); // 1 minute cooldown
+    };
+
     return (
         <div className="p-6 space-y-8">
             {/* Hero Card */}
@@ -93,33 +108,37 @@ const CheckInTab: React.FC<CheckInTabProps> = ({
                     <div>
                         {!isCheckedIn ? (
                             <button
-                                onClick={() => handleCheckIn('checkin')}
-                                disabled={loading}
+                                onClick={() => onAction('checkin')}
+                                disabled={loading || cooldown > 0}
                                 className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 p-px shadow-xl transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
                             >
                                 <div className="relative flex items-center justify-center space-x-3 bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-4 rounded-2xl">
                                     <div className="p-2 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
                                         <LogIn className="w-6 h-6 text-white" />
                                     </div>
-                                    <span className="font-bold text-white text-lg">Clock In</span>
+                                    <span className="font-bold text-white text-lg">
+                                        {cooldown > 0 ? `Please wait ${cooldown}s` : 'Clock In'}
+                                    </span>
                                 </div>
                             </button>
                         ) : (
                             <button
-                                onClick={() => handleCheckIn('checkout')}
-                                disabled={loading}
+                                onClick={() => onAction('checkout')}
+                                disabled={loading || cooldown > 0}
                                 className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 to-red-600 p-px shadow-xl transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
                             >
                                 <div className="relative flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-600 px-8 py-4 rounded-2xl">
                                     <div className="p-2 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
                                         <LogOut className="w-6 h-6 text-white" />
                                     </div>
-                                    <span className="font-bold text-white text-lg">Clock Out</span>
+                                    <span className="font-bold text-white text-lg">
+                                        {cooldown > 0 ? `Please wait ${cooldown}s` : 'Clock Out'}
+                                    </span>
                                 </div>
                             </button>
                         )}
                         <p className="text-center text-xs text-gray-400 mt-4 font-medium">
-                            {loading ? 'Processing request...' : 'Tap to record attendance'}
+                            {loading ? 'Processing request...' : cooldown > 0 ? 'Cooldown active' : 'Tap to record attendance'}
                         </p>
                     </div>
                 </div>

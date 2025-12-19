@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Attendance from '@/models/Attendance';
-import { getClientIP } from '@/lib/utils';
+import { getClientIP, getDeviceInfo } from '@/lib/utils';
 import { performAutoCheckout } from '@/lib/attendance-service';
 
 export async function POST(request) {
@@ -9,6 +9,8 @@ export async function POST(request) {
         const { employeeId, latitude, longitude, address, timestamp, type } = await request.json();
 
         const ipAddress = getClientIP(request);
+        const userAgent = request.headers.get('user-agent') || 'Unknown';
+        const deviceInfo = getDeviceInfo(userAgent);
 
         await connectDB();
 
@@ -49,6 +51,7 @@ export async function POST(request) {
                 checkIn: new Date(timestamp),
                 checkInLocation: { latitude, longitude, address },
                 checkInIP: ipAddress,
+                checkInDevice: deviceInfo,
             };
 
             if (attendance) {
@@ -125,6 +128,7 @@ export async function POST(request) {
             lastSession.checkOut = new Date(timestamp);
             lastSession.checkOutLocation = { latitude, longitude, address };
             lastSession.checkOutIP = ipAddress;
+            lastSession.checkOutDevice = deviceInfo;
 
             // Also update root clockOut
             attendance.clockOut = new Date(timestamp);
