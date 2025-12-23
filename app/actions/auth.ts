@@ -29,7 +29,7 @@ export async function getCurrentUser() {
         const { MongoClient, ObjectId } = await import('mongodb');
         const clientPromise = (await import('@/lib/mongodb')).default;
         const client = await clientPromise;
-        const db = client.db('officeAttendance');
+        const db = client.db(process.env.MONGODB_DB_NAME);
 
         const user = await db.collection('users').findOne({ _id: new ObjectId(payload.id as string) });
 

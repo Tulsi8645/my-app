@@ -9,13 +9,13 @@ async function seed() {
 
     try {
         await client.connect();
-        const db = client.db('officeAttendance');
+        const db = client.db();
 
         console.log('Connected to database...');
 
         // 1. Setup Employee
-        const hashedPassword = await bcrypt.hash('password123', 10);
-        const email = 'sanjayguwaju@gmail.com';
+        const hashedPassword = await bcrypt.hash('strongpassword', 10);
+        const email = 'tecobitpvtltd@gmail.com';
 
         // Check if user exists
         const existingUser = await db.collection('users').findOne({ email });
@@ -25,12 +25,12 @@ async function seed() {
         } else {
             const employeeId = 'EMP-' + Date.now(); // Unique ID
             const result = await db.collection('users').insertOne({
-                name: 'Sanjay Guwaju',
+                name: 'Tecobit Technology',
                 email: email,
-                department: 'IT',
+                department: 'Management',
                 password: hashedPassword,
                 employeeId: employeeId,
-                role: 'user'
+                role: 'admin'
             });
             console.log(`Created new employee user: ${employeeId} (${result.insertedId})`);
         }
